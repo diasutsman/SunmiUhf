@@ -48,10 +48,7 @@ class LoginActivity : BaseActivity<ActivityLoginBinding>() {
         binding.spinnerDatabase.adapter = initialAdapter
         binding.spinnerDatabase.setSelection(0)
 
-        val savedUsername = pref.getParam("login_username", "")
-        if (binding.etUsername.text.isNullOrBlank() && savedUsername.isNotBlank()) {
-            binding.etUsername.setText(savedUsername)
-        }
+
 
         // Auto fetch databases if URL is already populated
         val currentUrl = binding.etProjectUrl.text.toString().trim()

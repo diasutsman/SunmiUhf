@@ -14,8 +14,9 @@ object AuthUtils {
         val pref = App.getPref()
         pref.clearPreference("login_uid")
         pref.clearPreference("login_session_id")
+        pref.clearPreference("login_username")
         pref.clearPreference("is_logged_in")
-        // Preserve login_url, login_database, and login_username for convenient auto-fill
+        // Preserve login_url and login_database for convenient auto-fill
     }
 
     fun isLoggedIn(): Boolean {
