@@ -5,6 +5,7 @@ import android.widget.ArrayAdapter
 import androidx.lifecycle.ViewModelProvider
 import com.sunmi.uhf.base.BaseActivity
 import com.sunmi.uhf.databinding.ActivityLoginBinding
+import com.sunmi.uhf.service.OdooApiClient
 import com.sunmi.uhf.utils.SharedPreference
 import com.sunmi.uhf.viewmodel.LoginViewModel
 
@@ -23,7 +24,41 @@ class LoginActivity : BaseActivity<ActivityLoginBinding>() {
 
     override fun initView() {
         checkExistingSession()
-        
+
+        val pref = App.getPref()
+        val savedUrl = pref.getParam("login_url", "")
+        val initialUrl = if (savedUrl.isNotBlank()) {
+            savedUrl
+        } else if (BuildConfig.SERVER_URL.isNotBlank()) {
+            BuildConfig.SERVER_URL
+        } else {
+            "https://bhsglobal.hashmicro.co"
+        }
+
+        if (binding.etProjectUrl.text.isNullOrBlank() && initialUrl.isNotBlank()) {
+            binding.etProjectUrl.setText(initialUrl)
+        }
+
+        val savedUsername = pref.getParam("login_username", "")
+        if (binding.etUsername.text.isNullOrBlank() && savedUsername.isNotBlank()) {
+            binding.etUsername.setText(savedUsername)
+        }
+
+        // Auto fetch databases if URL is already populated
+        val currentUrl = binding.etProjectUrl.text.toString().trim()
+        if (currentUrl.isNotEmpty()) {
+            viewModel.fetchDatabases(currentUrl)
+        }
+
+        binding.etProjectUrl.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) {
+                val url = binding.etProjectUrl.text.toString().trim()
+                if (url.isNotEmpty() && (viewModel.databases.value == null || viewModel.databases.value!!.isEmpty())) {
+                    viewModel.fetchDatabases(url)
+                }
+            }
+        }
+
         binding.btnFetchDatabases.setOnClickListener {
             val url = binding.etProjectUrl.text.toString().trim()
             if (url.isEmpty()) {
@@ -41,7 +76,7 @@ class LoginActivity : BaseActivity<ActivityLoginBinding>() {
     private fun checkExistingSession() {
         val pref = App.getPref()
         val isLoggedIn = pref.getParam("is_logged_in", false)
-        
+
         if (isLoggedIn) {
             navigateToMainActivity()
         }
@@ -63,6 +98,12 @@ class LoginActivity : BaseActivity<ActivityLoginBinding>() {
                 val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, dbNames)
                 adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
                 binding.spinnerDatabase.adapter = adapter
+
+                val savedDb = App.getPref().getParam("login_database", "")
+                val targetIndex = if (savedDb.isNotBlank()) dbNames.indexOf(savedDb) else 0
+                if (targetIndex >= 0) {
+                    binding.spinnerDatabase.setSelection(targetIndex)
+                }
             }
         }
 
@@ -92,11 +133,17 @@ class LoginActivity : BaseActivity<ActivityLoginBinding>() {
         val url = binding.etProjectUrl.text.toString().trim()
         val username = binding.etUsername.text.toString().trim()
         val password = binding.etPassword.text.toString().trim()
-        val database = binding.spinnerDatabase.selectedItem?.toString() ?: ""
+        var database = binding.spinnerDatabase.selectedItem?.toString() ?: ""
+
+        if (database.isEmpty()) {
+            val savedDb = App.getPref().getParam("login_database", "")
+            if (savedDb.isNotEmpty()) {
+                database = savedDb
+            }
+        }
 
         when {
             url.isEmpty() -> showToast("Please enter project URL")
-            database.isEmpty() -> showToast("Please select a database")
             username.isEmpty() -> showToast("Please enter username")
             password.isEmpty() -> showToast("Please enter password")
             else -> {
@@ -114,6 +161,7 @@ class LoginActivity : BaseActivity<ActivityLoginBinding>() {
         pref.setParam("login_username", response.username)
         pref.setParam("login_url", response.url)
         pref.setParam("is_logged_in", true)
+        OdooApiClient.refreshClient()
     }
 
     private fun navigateToMainActivity() {

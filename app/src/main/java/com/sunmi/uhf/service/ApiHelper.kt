@@ -163,6 +163,57 @@ object ApiHelper {
         bodyStr
     }
 
+    suspend fun searchRead(
+        model: String,
+        domain: JSONArray = JSONArray(),
+        fields: List<String> = emptyList(),
+        offset: Int = 0,
+        limit: Int = 20,
+        sort: String = "id desc"
+    ): JSONArray = withContext(Dispatchers.IO) {
+        val serverUrl = com.sunmi.uhf.utils.AuthUtils.getServerUrl().trim().removeSuffix("/")
+        val url = "$serverUrl/web/dataset/search_read"
+
+        val fieldsArray = JSONArray()
+        fields.forEach { fieldsArray.put(it) }
+
+        val params = JSONObject().apply {
+            put("model", model)
+            put("domain", domain)
+            put("fields", fieldsArray)
+            put("offset", offset)
+            put("limit", limit)
+            put("sort", sort)
+        }
+
+        val jsonRpcBody = JSONObject().apply {
+            put("jsonrpc", "2.0")
+            put("method", "call")
+            put("params", params)
+            put("id", System.currentTimeMillis())
+        }
+
+        val requestBody = jsonRpcBody.toString().toRequestBody("application/json".toMediaType())
+        val request = Request.Builder()
+            .url(url)
+            .post(requestBody)
+            .build()
+
+        val response = OdooApiClient.getClient().newCall(request).execute()
+        val responseBody = response.body?.string() ?: throw Exception("Empty response body from $url")
+
+        val jsonObject = JSONObject(responseBody)
+        if (jsonObject.has("error")) {
+            val errorObj = jsonObject.optJSONObject("error")
+            val errorData = errorObj?.optJSONObject("data")
+            val message = errorData?.optString("message", errorObj?.optString("message", "search_read failed"))
+            throw Exception(message)
+        }
+
+        val result = jsonObject.optJSONObject("result")
+        return@withContext result?.optJSONArray("records") ?: JSONArray()
+    }
+
     fun clearCache(pattern: String = "") {
         if (pattern.isEmpty()) {
             cache.evictAll()

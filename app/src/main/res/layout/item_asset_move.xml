@@ -8,45 +8,55 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
 
-    <!-- Product Name -->
+    <!-- Product / Asset Name -->
     <TextView
         android:id="@+id/txtProduct"
         android:textStyle="bold"
-        android:textSize="16sp"
-        android:textColor="#000000"
+        android:textSize="15sp"
+        android:textColor="#1E1E1E"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Product Name" />
+        android:text="Asset Name" />
 
-    <!-- Lot Name -->
+    <!-- RFID with label -->
     <TextView
         android:id="@+id/txtLot"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textColor="#444444"
-        android:text="Lot: -" />
+        android:textColor="#333333"
+        android:textSize="13sp"
+        android:layout_marginTop="3dp"
+        android:text="RFID: -" />
 
-    <!-- Quantity (Done/Total) -->
+    <!-- Category -->
     <TextView
         android:id="@+id/txtCategory"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textColor="#444444"
-        android:text="Qty: 0/0" />
+        android:textColor="#555555"
+        android:textSize="13sp"
+        android:layout_marginTop="3dp"
+        android:text="Category: -" />
 
-    <!-- Unit of Measure -->
-    <TextView
-        android:id="@+id/txtEmployee"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textColor="#444444"
-        android:text="Employee: -" />
-
+    <!-- Held By (From) -->
     <TextView
         android:id="@+id/txtHeldBy"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textColor="#444444"
-        android:text="Held by: -" />
+        android:textSize="13sp"
+        android:layout_marginTop="2dp"
+        android:text="From: -" />
+
+    <!-- Employee (To) -->
+    <TextView
+        android:id="@+id/txtEmployee"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="#444444"
+        android:textSize="13sp"
+        android:layout_marginTop="2dp"
+        android:text="To: -" />
 
 </LinearLayout>
+

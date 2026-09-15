@@ -234,34 +234,172 @@ class AssetFragment : Fragment() {
         isLoading = true
         loadJob = lifecycleScope.launch {
             try {
-                val useCache = page == 1
                 val offset = (page - 1) * pageSize
-                val url = "${AuthUtils.getServerUrl()}/get/asset?offset=$offset&limit=$pageSize"
-                Log.d(TAG, "request url=$url useCache=$useCache page=$page offset=$offset query=$query")
-                val jsonObject = ApiHelper.getJsonObject(
-                    url,
-                    useCache = useCache
-                )
+                val AssetList = mutableListOf<AssetItem>()
+                var fetchSuccess = false
 
-                if (jsonObject.getString("status") == "success") {
-                    val jsonArray = jsonObject.getJSONArray("assets")
-                    val AssetList = mutableListOf<AssetItem>()
+                // 1. Primary approach: Use Odoo native search_read on employee.asset.transfer
+                try {
+                    val domain = org.json.JSONArray()
+                    val records = ApiHelper.searchRead(
+                        model = "employee.asset.transfer",
+                        domain = domain,
+                        fields = listOf("id", "name", "due_date", "state", "assets_line", "create_uid"),
+                        offset = offset,
+                        limit = pageSize,
+                        sort = "id desc"
+                    )
 
-                    for (i in 0 until jsonArray.length()) {
-                        val obj = jsonArray.getJSONObject(i)
+                    val transferIds = mutableListOf<Int>()
+                    val creatorMap = mutableMapOf<Int, String>()
+                    for (i in 0 until records.length()) {
+                        val obj = records.getJSONObject(i)
+                        val id = obj.getInt("id")
+                        val cField = obj.opt("create_uid")
+                        val creator = when (cField) {
+                            is org.json.JSONArray -> cField.optString(1, "")
+                            is String -> if (cField == "false") "" else cField
+                            else -> ""
+                        }
+                        if (creator.isNotBlank()) {
+                            creatorMap[id] = creator
+                        }
+                        if (!seenIds.contains(id)) {
+                            transferIds.add(id)
+                        }
+                    }
+
+                    // Query employee.asset.transfer.line to get from_holder and to_employee
+                    val lineMap = mutableMapOf<Int, Pair<String, String>>()
+                    if (transferIds.isNotEmpty()) {
+                        try {
+                            val linesDomain = org.json.JSONArray().apply {
+                                put(org.json.JSONArray().apply {
+                                    put("employee_asset_transfer_id")
+                                    put("in")
+                                    put(org.json.JSONArray(transferIds))
+                                })
+                            }
+                            val linesRecords = ApiHelper.searchRead(
+                                model = "employee.asset.transfer.line",
+                                domain = linesDomain,
+                                fields = listOf("id", "employee_asset_transfer_id", "asset_id", "held_by_id", "employee_id", "asset_category_id", "create_uid"),
+                                offset = 0,
+                                limit = 100
+                            )
+
+                            for (j in 0 until linesRecords.length()) {
+                                val lObj = linesRecords.getJSONObject(j)
+                                val trField = lObj.opt("employee_asset_transfer_id")
+                                val trId = when (trField) {
+                                    is org.json.JSONArray -> trField.optInt(0, -1)
+                                    is Int -> trField
+                                    else -> -1
+                                }
+                                if (trId != -1 && !lineMap.containsKey(trId)) {
+                                    val heldByRaw = when (val h = lObj.opt("held_by_id")) {
+                                        is org.json.JSONArray -> h.optString(1, "")
+                                        is String -> if (h == "false" || h.isBlank()) "" else h
+                                        else -> ""
+                                    }
+                                    val creator = creatorMap[trId] ?: when (val c = lObj.opt("create_uid")) {
+                                        is org.json.JSONArray -> c.optString(1, "")
+                                        is String -> if (c == "false") "" else c
+                                        else -> ""
+                                    }
+                                    val heldBy = if (heldByRaw.isNotBlank()) {
+                                        heldByRaw
+                                    } else if (creator.isNotBlank()) {
+                                        creator
+                                    } else {
+                                        "Storage"
+                                    }
+
+                                    val emp = when (val e = lObj.opt("employee_id")) {
+                                        is org.json.JSONArray -> e.optString(1, "-")
+                                        is String -> if (e == "false" || e.isBlank()) "-" else e
+                                        else -> "-"
+                                    }
+                                    lineMap[trId] = Pair(heldBy, emp)
+                                }
+                            }
+                        } catch (le: Exception) {
+                            Log.w(TAG, "Failed fetching lines via search_read: ${le.message}")
+                        }
+                    }
+
+                    for (i in 0 until records.length()) {
+                        val obj = records.getJSONObject(i)
                         val id = obj.getInt("id")
                         if (seenIds.contains(id)) continue
                         seenIds.add(id)
+
+                        val fallbackCreator = creatorMap[id] ?: "Storage"
+                        val (fromHolder, toEmployee) = lineMap[id] ?: Pair(fallbackCreator, "-")
+                        val dueDateRaw = obj.optString("due_date", "-")
+                        val dueDate = if (dueDateRaw == "false" || dueDateRaw.isBlank()) "-" else dueDateRaw
+                        val state = obj.optString("state", "draft")
+
                         AssetList.add(
                             AssetItem(
                                 id = id,
-                                name = obj.getString("name"),
-                                dueDate = obj.getString("due_date"),
-                                partnerName = obj.optString("partner_name", "-"),
-                                state = obj.getString("state")
+                                name = obj.optString("name", "EAT"),
+                                dueDate = dueDate,
+                                partnerName = "-",
+                                state = state,
+                                transferType = "Transfer Out",
+                                fromHolder = fromHolder,
+                                toEmployee = toEmployee
                             )
                         )
                     }
+                    fetchSuccess = true
+                } catch (se: Exception) {
+                    Log.w(TAG, "search_read failed, falling back to /get/asset: ${se.message}")
+                }
+
+                // 2. Fallback to /get/asset endpoint if search_read didn't succeed
+                if (!fetchSuccess) {
+                    val useCache = page == 1
+                    val url = "${AuthUtils.getServerUrl()}/get/asset?offset=$offset&limit=$pageSize"
+                    Log.d(TAG, "request url=$url useCache=$useCache page=$page offset=$offset query=$query")
+                    val jsonObject = ApiHelper.getJsonObject(
+                        url,
+                        useCache = useCache
+                    )
+
+                    if (jsonObject.getString("status") == "success") {
+                        val jsonArray = jsonObject.getJSONArray("assets")
+                        for (i in 0 until jsonArray.length()) {
+                            val obj = jsonArray.getJSONObject(i)
+                            val id = obj.getInt("id")
+                            if (seenIds.contains(id)) continue
+                            seenIds.add(id)
+
+                            val transferType = obj.optString("transfer_type", obj.optString("type", obj.optString("direction", "")))
+                            val fromHolder = obj.optString("from_holder", obj.optString("from_employee", obj.optString("held_by", obj.optString("source_location", "-"))))
+                            val toEmployee = obj.optString("to_employee", obj.optString("employee", obj.optString("to_holder", obj.optString("dest_location", obj.optString("partner_name", "-")))))
+
+                            AssetList.add(
+                                AssetItem(
+                                    id = id,
+                                    name = obj.getString("name"),
+                                    dueDate = obj.optString("due_date", "-"),
+                                    partnerName = obj.optString("partner_name", "-"),
+                                    state = obj.optString("state", ""),
+                                    transferType = transferType,
+                                    fromHolder = fromHolder,
+                                    toEmployee = toEmployee
+                                )
+                            )
+                        }
+                    } else {
+                        isLoading = false
+                        progressBar.visibility = View.GONE
+                        Toast.makeText(requireContext(), "Failed: ${jsonObject.optString("message")}", Toast.LENGTH_SHORT).show()
+                        return@launch
+                    }
+                }
 
                     progressBar.visibility = View.GONE
                     contentLayout.visibility = View.VISIBLE
@@ -296,11 +434,6 @@ class AssetFragment : Fragment() {
                     } else {
                         currentPage = page
                     }
-                } else {
-                    isLoading = false
-                    progressBar.visibility = View.GONE
-                    Toast.makeText(requireContext(), "Failed: ${jsonObject.optString("message")}", Toast.LENGTH_SHORT).show()
-                }
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) {
                     Log.d(TAG, "loadAssetOrders cancelled")

@@ -8,10 +8,30 @@ data class AssetItem(
     val name: String,
     val dueDate: String,
     val partnerName: String,
-    val state: String
+    val state: String,
+    val transferType: String = "",
+    val fromHolder: String = "",
+    val toEmployee: String = ""
 ) : Parcelable {
+
+    val displayTransferType: String
+        get() {
+            val t = transferType.trim().lowercase()
+            return when {
+                t.contains("out") || t.contains("checkout") -> "Transfer Out"
+                t.contains("in") || t.contains("return") -> "Transfer In / Return"
+                transferType.isNotBlank() -> transferType.replace("_", " ").split(" ")
+                    .filter { it.isNotEmpty() }
+                    .joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
+                else -> "-"
+            }
+        }
+
     constructor(parcel: Parcel) : this(
         parcel.readInt(),
+        parcel.readString() ?: "",
+        parcel.readString() ?: "",
+        parcel.readString() ?: "",
         parcel.readString() ?: "",
         parcel.readString() ?: "",
         parcel.readString() ?: "",
@@ -24,6 +44,9 @@ data class AssetItem(
         parcel.writeString(dueDate)
         parcel.writeString(partnerName)
         parcel.writeString(state)
+        parcel.writeString(transferType)
+        parcel.writeString(fromHolder)
+        parcel.writeString(toEmployee)
     }
 
     override fun describeContents(): Int = 0
@@ -33,3 +56,4 @@ data class AssetItem(
         override fun newArray(size: Int): Array<AssetItem?> = arrayOfNulls(size)
     }
 }
+

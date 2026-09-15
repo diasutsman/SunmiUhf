@@ -46,11 +46,22 @@ class LoginViewModel : BaseViewModel() {
         launch {
             try {
                 _isLoading.postValue(true)
+                var db = database.trim()
+                if (db.isEmpty()) {
+                    val dbList = authService.getDatabases(url)
+                    if (dbList.isNotEmpty()) {
+                        _databases.postValue(dbList)
+                        db = dbList[0].name
+                    }
+                }
+                if (db.isEmpty()) {
+                    throw Exception("Please select a database")
+                }
                 val request = LoginRequest(
                     url = url,
                     username = username,
                     password = password,
-                    database = database
+                    database = db
                 )
                 val response = authService.login(request)
                 _loginResponse.postValue(response)

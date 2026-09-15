@@ -33,12 +33,16 @@ class AssetMoveAdapter(private var items: List<AssetMoveItem>) :
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = items[position]
-        holder.txtProduct.text = item.asset
-        holder.txtCategory.text = item.category
-        holder.txtEmployee.text = item.employee
-        holder.txtHeldBy.text = item.heldBy
-        holder.txtLot.text = item.rfid
+        holder.txtProduct.text = if (item.asset.isNotBlank() && item.asset != "false") item.asset else "-"
+        
+        val rfidVal = if (item.rfid.isNotBlank() && item.rfid != "false") item.rfid else "-"
+        holder.txtLot.visibility = View.VISIBLE
+        holder.txtLot.text = "RFID: $rfidVal"
 
-//        holder.txtQty.text = "Qty: ${item.quantityDone}/${item.productUomQty}"
+        holder.txtCategory.text = "Category: ${if (item.category.isNotBlank() && item.category != "false") item.category else "-"}"
+        val fromText = if (item.heldBy.isNotBlank() && item.heldBy != "false") item.heldBy else "-"
+        val toText = if (item.employee.isNotBlank() && item.employee != "false") item.employee else "-"
+        holder.txtHeldBy.text = "From: $fromText"
+        holder.txtEmployee.text = "To: $toText"
     }
 }

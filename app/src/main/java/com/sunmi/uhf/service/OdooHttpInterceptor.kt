@@ -22,7 +22,12 @@ class OdooHttpInterceptor : Interceptor {
             requestBuilder.addHeader("Content-Type", "application/json")
         }
         
-        if (sessionId.isNotEmpty()) {
+        val urlString = originalRequest.url.toString()
+        val isAuthEndpoint = urlString.contains("/web/session/authenticate") ||
+                             urlString.contains("/web/database/list") ||
+                             urlString.contains("/xmlrpc/2/db")
+
+        if (sessionId.isNotEmpty() && !isAuthEndpoint) {
             requestBuilder.addHeader("Cookie", "session_id=$sessionId")
             Log.d("OdooHttpInterceptor", "Session cookie injected")
         }
