@@ -32,12 +32,21 @@ class LoginActivity : BaseActivity<ActivityLoginBinding>() {
         } else if (BuildConfig.SERVER_URL.isNotBlank()) {
             BuildConfig.SERVER_URL
         } else {
-            "https://bhsglobal.hashmicro.co"
+            com.sunmi.uhf.utils.AuthUtils.DEFAULT_SERVER_URL
         }
 
         if (binding.etProjectUrl.text.isNullOrBlank() && initialUrl.isNotBlank()) {
             binding.etProjectUrl.setText(initialUrl)
         }
+
+        val savedDb = pref.getParam("login_database", "")
+        val initialDb = if (savedDb.isNotBlank()) savedDb else com.sunmi.uhf.utils.AuthUtils.DEFAULT_DATABASE
+
+        // Pre-populate database spinner immediately so it is never empty while fetching
+        val initialAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, listOf(initialDb))
+        initialAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        binding.spinnerDatabase.adapter = initialAdapter
+        binding.spinnerDatabase.setSelection(0)
 
         val savedUsername = pref.getParam("login_username", "")
         if (binding.etUsername.text.isNullOrBlank() && savedUsername.isNotBlank()) {
@@ -66,6 +75,19 @@ class LoginActivity : BaseActivity<ActivityLoginBinding>() {
                 return@setOnClickListener
             }
             viewModel.fetchDatabases(url)
+        }
+
+        var isPasswordVisible = false
+        binding.btnTogglePassword.setOnClickListener {
+            isPasswordVisible = !isPasswordVisible
+            if (isPasswordVisible) {
+                binding.etPassword.transformationMethod = android.text.method.HideReturnsTransformationMethod.getInstance()
+                binding.btnTogglePassword.setImageResource(R.drawable.ic_visibility)
+            } else {
+                binding.etPassword.transformationMethod = android.text.method.PasswordTransformationMethod.getInstance()
+                binding.btnTogglePassword.setImageResource(R.drawable.ic_visibility_off)
+            }
+            binding.etPassword.setSelection(binding.etPassword.text?.length ?: 0)
         }
 
         binding.btnLogin.setOnClickListener {
@@ -100,10 +122,9 @@ class LoginActivity : BaseActivity<ActivityLoginBinding>() {
                 binding.spinnerDatabase.adapter = adapter
 
                 val savedDb = App.getPref().getParam("login_database", "")
-                val targetIndex = if (savedDb.isNotBlank()) dbNames.indexOf(savedDb) else 0
-                if (targetIndex >= 0) {
-                    binding.spinnerDatabase.setSelection(targetIndex)
-                }
+                val preferredDb = if (savedDb.isNotBlank()) savedDb else com.sunmi.uhf.utils.AuthUtils.DEFAULT_DATABASE
+                val targetIndex = dbNames.indexOf(preferredDb).takeIf { it >= 0 } ?: 0
+                binding.spinnerDatabase.setSelection(targetIndex)
             }
         }
 
@@ -137,9 +158,7 @@ class LoginActivity : BaseActivity<ActivityLoginBinding>() {
 
         if (database.isEmpty()) {
             val savedDb = App.getPref().getParam("login_database", "")
-            if (savedDb.isNotEmpty()) {
-                database = savedDb
-            }
+            database = if (savedDb.isNotEmpty()) savedDb else com.sunmi.uhf.utils.AuthUtils.DEFAULT_DATABASE
         }
 
         when {

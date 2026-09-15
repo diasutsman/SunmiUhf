@@ -7,8 +7,10 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.sunmi.uhf.R
 
-class AssetMoveAdapter(private var items: List<AssetMoveItem>) :
-    RecyclerView.Adapter<AssetMoveAdapter.ViewHolder>() {
+class AssetMoveAdapter(
+    private var items: List<AssetMoveItem>,
+    private val onItemClick: ((AssetMoveItem) -> Unit)? = null
+) : RecyclerView.Adapter<AssetMoveAdapter.ViewHolder>() {
 
     fun updateData(newItems: List<AssetMoveItem>) {
         items = newItems
@@ -16,6 +18,7 @@ class AssetMoveAdapter(private var items: List<AssetMoveItem>) :
     }
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val root: View = view
         val txtProduct: TextView = view.findViewById(R.id.txtProduct)
         val txtLot: TextView = view.findViewById(R.id.txtLot)
         val txtCategory: TextView = view.findViewById(R.id.txtCategory)
@@ -44,5 +47,9 @@ class AssetMoveAdapter(private var items: List<AssetMoveItem>) :
         val toText = if (item.employee.isNotBlank() && item.employee != "false") item.employee else "-"
         holder.txtHeldBy.text = "From: $fromText"
         holder.txtEmployee.text = "To: $toText"
+
+        holder.root.setOnClickListener {
+            onItemClick?.invoke(item)
+        }
     }
 }

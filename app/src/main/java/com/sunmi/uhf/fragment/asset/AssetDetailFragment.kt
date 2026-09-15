@@ -94,8 +94,33 @@ class AssetDetailFragment : Fragment() {
             ProgressBar(requireContext())
         }
 
-        // RecyclerView
-        adapter = AssetMoveAdapter(emptyList())
+        // Floating Scan Button
+        view.findViewById<FloatingActionButton>(R.id.btnScanDetail)?.setOnClickListener {
+            val args = Bundle().apply {
+                putInt(TakeInventoryFragment.ARC_KEY_ASSET_ID, assetId)
+            }
+            val fragment = TakeInventoryFragment.newInstance(args)
+            (activity as? com.sunmi.uhf.base.BaseActivity<*>)?.switchFragment(
+                fragment,
+                addToBackStack = true,
+                clearStack = false
+            )
+        }
+
+        // RecyclerView with inspection click listener
+        adapter = AssetMoveAdapter(emptyList()) { moveItem ->
+            val rfid = moveItem.rfid.takeIf { it.isNotBlank() && it != "-" && it != "false" }
+            if (!rfid.isNullOrBlank()) {
+                val verificationFragment = AssetVerificationFragment.newInstance(rfid, assetId)
+                (activity as? com.sunmi.uhf.base.BaseActivity<*>)?.switchFragment(
+                    verificationFragment,
+                    addToBackStack = true,
+                    clearStack = false
+                )
+            } else {
+                Toast.makeText(requireContext(), "Asset Line: ${moveItem.asset}", Toast.LENGTH_SHORT).show()
+            }
+        }
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
         recyclerView.adapter = adapter
 
@@ -110,10 +135,7 @@ class AssetDetailFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        if (shouldRefreshOnResume) {
-            shouldRefreshOnResume = false
-            loadMoveLines()
-        }
+        loadMoveLines()
     }
 
     @SuppressLint("SetTextI18n")

@@ -104,7 +104,7 @@ class AssetFragment : Fragment() {
         })
 
         btnScan.setOnClickListener {
-            fetchAndShowUserDialog()
+            goToTakeInventory()
         }
 
         // Search listener (debounced) - local filtering + refresh
@@ -136,13 +136,10 @@ class AssetFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        if (shouldRefreshOnResume) {
-            shouldRefreshOnResume = false
-            // reset paging to reload from first page
-            currentPage = 1
-            isLastPage = false
-            loadAssetOrders(page = 1)
-        }
+        // Reset paging to reload and display newly confirmed assignments/transfers
+        currentPage = 1
+        isLastPage = false
+        loadAssetOrders(page = 1, query = currentQuery)
     }
 
     private fun fetchAndShowUserDialog() {

@@ -7,14 +7,15 @@ import com.sunmi.uhf.LoginActivity
 
 object AuthUtils {
 
+    const val DEFAULT_SERVER_URL = "https://bhsglobal.hashmicro.co"
+    const val DEFAULT_DATABASE = "bhs-live"
+
     fun logout() {
         val pref = App.getPref()
         pref.clearPreference("login_uid")
         pref.clearPreference("login_session_id")
-        pref.clearPreference("login_database")
-        pref.clearPreference("login_username")
-        pref.clearPreference("login_url")
         pref.clearPreference("is_logged_in")
+        // Preserve login_url, login_database, and login_username for convenient auto-fill
     }
 
     fun isLoggedIn(): Boolean {
@@ -33,13 +34,7 @@ object AuthUtils {
     }
 
     fun getApiBaseUrl(): String {
-        val pref = App.getPref()
-        val savedUrl = pref.getParam("login_url", "")
-        return if (savedUrl.isNotEmpty()) {
-            "$savedUrl/api"
-        } else {
-            "${BuildConfig.SERVER_URL}/api"
-        }
+        return "${getServerUrl()}/api"
     }
 
     fun getServerUrl(): String {
@@ -47,8 +42,10 @@ object AuthUtils {
         val savedUrl = pref.getParam("login_url", "")
         return if (savedUrl.isNotEmpty()) {
             savedUrl
-        } else {
+        } else if (BuildConfig.SERVER_URL.isNotEmpty()) {
             BuildConfig.SERVER_URL
+        } else {
+            DEFAULT_SERVER_URL
         }
     }
 

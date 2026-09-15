@@ -189,7 +189,7 @@ class TakeInventoryFragment : ReadBaseFragment<FragmentTakeInventoryBinding>() {
                 vm.assetVisible.value = false
                 vm.editModel.value = true
             }
-            selectedUserId != null && selectedUserId != 0 -> {
+            (assetId != null && assetId != 0) || (selectedUserId != null && selectedUserId != 0) -> {
                 vm.assetVisible.value = true
                 vm.deliveryVisible.value = false
                 vm.receivingVisible.value = false
@@ -383,13 +383,26 @@ class TakeInventoryFragment : ReadBaseFragment<FragmentTakeInventoryBinding>() {
     }
 
     private fun processAssetSelection() {
-        val rfids = tidList.toList() // Get all scanned RFIDs
-        if (rfids.isEmpty()) {
+        val selectedRfids = adapter.selectData.values.mapNotNull { it.epc }.ifEmpty {
+            tidList.toList()
+        }
+        if (selectedRfids.isEmpty()) {
             mainScope.launch { showShort(getString(R.string.please_take_inventory_before_proceeding)) }
             return
         }
-        // Query server for product info for each RFID
-        checkRfidsAndAsset(rfids)
+
+        val rfidToInspect = selectedRfids.first()
+        val currentAssetId = assetId ?: 0
+
+        val verificationFragment = com.sunmi.uhf.fragment.asset.AssetVerificationFragment.newInstance(
+            rfid = rfidToInspect,
+            assetId = currentAssetId
+        )
+        (activity as? com.sunmi.uhf.base.BaseActivity<*>)?.switchFragment(
+            verificationFragment,
+            addToBackStack = true,
+            clearStack = false
+        )
     }
 
     private fun processProductAssetSelection() {
