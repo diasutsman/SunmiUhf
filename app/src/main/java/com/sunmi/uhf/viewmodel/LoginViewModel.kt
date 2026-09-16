@@ -25,19 +25,21 @@ class LoginViewModel : BaseViewModel() {
     private val _errorMessage = MutableLiveData<String>()
     val errorMessage: LiveData<String> get() = _errorMessage
 
-    fun fetchDatabases(url: String) {
+    fun fetchDatabases(url: String, silent: Boolean = false) {
         launch {
             try {
-                _isLoading.postValue(true)
+                if (!silent) _isLoading.postValue(true)
                 val dbList = authService.getDatabases(url)
                 _databases.postValue(dbList)
-                _errorMessage.postValue("")
+                if (!silent) _errorMessage.postValue("")
             } catch (e: Exception) {
                 LogUtils.e("LoginVM", "Error fetching databases: ${e.message}")
-                _errorMessage.postValue(e.message ?: "Failed to fetch databases")
+                if (!silent) {
+                    _errorMessage.postValue(e.message ?: "Failed to fetch databases")
+                }
                 _databases.postValue(emptyList())
             } finally {
-                _isLoading.postValue(false)
+                if (!silent) _isLoading.postValue(false)
             }
         }
     }

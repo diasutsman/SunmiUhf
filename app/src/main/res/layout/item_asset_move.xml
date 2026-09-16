@@ -1,22 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="vertical"
-    android:padding="12dp"
+    android:padding="14dp"
     android:background="@android:color/white"
     android:layout_margin="6dp"
     android:elevation="2dp"
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
 
-    <!-- Product / Asset Name -->
-    <TextView
-        android:id="@+id/txtProduct"
-        android:textStyle="bold"
-        android:textSize="15sp"
-        android:textColor="#1E1E1E"
-        android:layout_width="wrap_content"
+    <!-- Header Row: Product / Asset Name + Status Badge -->
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Asset Name" />
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/txtProduct"
+            android:textStyle="bold"
+            android:textSize="15sp"
+            android:textColor="#1E1E1E"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Asset Name" />
+
+        <TextView
+            android:id="@+id/txtStatusBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="3dp"
+            android:paddingBottom="3dp"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:background="@drawable/bg_badge_unassigned"
+            android:textColor="#E65100"
+            android:text="UNASSIGNED" />
+    </LinearLayout>
 
     <!-- RFID with label -->
     <TextView
@@ -25,7 +47,7 @@
         android:layout_height="wrap_content"
         android:textColor="#333333"
         android:textSize="13sp"
-        android:layout_marginTop="3dp"
+        android:layout_marginTop="5dp"
         android:text="RFID: -" />
 
     <!-- Category -->
@@ -45,18 +67,39 @@
         android:layout_height="wrap_content"
         android:textColor="#444444"
         android:textSize="13sp"
-        android:layout_marginTop="2dp"
+        android:layout_marginTop="3dp"
         android:text="From: -" />
 
-    <!-- Employee (To) -->
-    <TextView
-        android:id="@+id/txtEmployee"
-        android:layout_width="wrap_content"
+    <!-- Employee (To) & Assign Button Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textColor="#444444"
-        android:textSize="13sp"
-        android:layout_marginTop="2dp"
-        android:text="To: -" />
+        android:layout_marginTop="6dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/txtEmployee"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="#444444"
+            android:textSize="13sp"
+            android:text="To: -" />
+
+        <TextView
+            android:id="@+id/btnAssignLine"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_button_assign"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:text="+ Assign Person"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+    </LinearLayout>
 
 </LinearLayout>
-

@@ -214,6 +214,49 @@ object ApiHelper {
         return@withContext result?.optJSONArray("records") ?: JSONArray()
     }
 
+    suspend fun callKw(
+        model: String,
+        method: String,
+        args: JSONArray = JSONArray(),
+        kwargs: JSONObject = JSONObject()
+    ): Any? = withContext(Dispatchers.IO) {
+        val serverUrl = com.sunmi.uhf.utils.AuthUtils.getServerUrl().trim().removeSuffix("/")
+        val url = "$serverUrl/web/dataset/call_kw"
+
+        val params = JSONObject().apply {
+            put("model", model)
+            put("method", method)
+            put("args", args)
+            put("kwargs", kwargs)
+        }
+
+        val jsonRpcBody = JSONObject().apply {
+            put("jsonrpc", "2.0")
+            put("method", "call")
+            put("params", params)
+            put("id", System.currentTimeMillis())
+        }
+
+        val requestBody = jsonRpcBody.toString().toRequestBody("application/json".toMediaType())
+        val request = Request.Builder()
+            .url(url)
+            .post(requestBody)
+            .build()
+
+        val response = OdooApiClient.getClient().newCall(request).execute()
+        val responseBody = response.body?.string() ?: throw Exception("Empty response body from $url")
+
+        val jsonObject = JSONObject(responseBody)
+        if (jsonObject.has("error")) {
+            val errorObj = jsonObject.optJSONObject("error")
+            val errorData = errorObj?.optJSONObject("data")
+            val message = errorData?.optString("message", errorObj?.optString("message", "call_kw failed"))
+            throw Exception(message)
+        }
+
+        return@withContext jsonObject.opt("result")
+    }
+
     fun clearCache(pattern: String = "") {
         if (pattern.isEmpty()) {
             cache.evictAll()

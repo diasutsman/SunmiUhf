@@ -64,7 +64,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="44dp"
                     android:background="@drawable/bg_input"
-                    android:hint="http://192.168.1.100:8069"
+                    android:hint="https://bhsglobal.hashmicro.co"
+                    android:text="https://bhsglobal.hashmicro.co"
                     android:paddingStart="12dp"
                     android:paddingEnd="12dp"
                     android:textColor="#1A1A1A"
@@ -86,12 +87,20 @@
                     android:layout_height="44dp"
                     android:orientation="horizontal">
 
-                    <Spinner
-                        android:id="@+id/spinner_database"
+                    <AutoCompleteTextView
+                        android:id="@+id/et_database"
                         android:layout_width="0dp"
                         android:layout_height="match_parent"
                         android:layout_weight="1"
-                        android:background="@drawable/bg_input" />
+                        android:background="@drawable/bg_input"
+                        android:hint="bhs-live"
+                        android:text="bhs-live"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="12dp"
+                        android:textColor="#1A1A1A"
+                        android:textColorHint="#B5B5B5"
+                        android:textSize="14sp"
+                        android:completionThreshold="1" />
 
                     <Button
                         android:id="@+id/btn_fetch_databases"

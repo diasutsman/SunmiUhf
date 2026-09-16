@@ -23,7 +23,7 @@ import com.sunmi.rfid.constant.CMD
 import com.sunmi.rfid.constant.ParamCts
 import com.sunmi.rfid.entity.DataParameter
 import com.sunmi.uhf.App
-import com.sunmi.uhf.BuildConfig
+//import com.sunmi.uhf.BuildConfig
 import com.sunmi.uhf.R
 import com.sunmi.uhf.adapter.LabelInfoAdapter
 import com.sunmi.uhf.adapter.TakeModelAdapter

@@ -17,12 +17,12 @@ if (localPropertiesFile.exists()) {
     }
 }
 
-def serverUrlValue = localProperties.getProperty("SERVER_URL", "")
+def serverUrlValue = localProperties.getProperty("SERVER_URL", "https://bhsglobal.hashmicro.co")
 def escapedServerUrl = serverUrlValue.replace("\\", "\\\\").replace('"', '\\"')
+def databaseValue = localProperties.getProperty("DATABASE", "bhs-live")
+def escapedDatabase = databaseValue.replace("\\", "\\\\").replace('"', '\\"')
 
 android {
-    compileSdkVersion 29
-
     compileSdkVersion 29
 
     defaultConfig {
@@ -35,6 +35,7 @@ android {
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField "String", "SERVER_URL", "\"${escapedServerUrl}\""
+        buildConfigField "String", "DEFAULT_DATABASE", "\"${escapedDatabase}\""
     }
     signingConfigs {
         config {//签名

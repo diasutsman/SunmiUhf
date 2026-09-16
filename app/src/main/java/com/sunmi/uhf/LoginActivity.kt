@@ -35,32 +35,36 @@ class LoginActivity : BaseActivity<ActivityLoginBinding>() {
             com.sunmi.uhf.utils.AuthUtils.DEFAULT_SERVER_URL
         }
 
-        if (binding.etProjectUrl.text.isNullOrBlank() && initialUrl.isNotBlank()) {
-            binding.etProjectUrl.setText(initialUrl)
-        }
+        binding.etProjectUrl.setText(initialUrl)
+        binding.etProjectUrl.setSelection(binding.etProjectUrl.text?.length ?: 0)
 
         val savedDb = pref.getParam("login_database", "")
-        val initialDb = if (savedDb.isNotBlank()) savedDb else com.sunmi.uhf.utils.AuthUtils.DEFAULT_DATABASE
+        val initialDb = if (savedDb.isNotBlank()) {
+            savedDb
+        } else if (BuildConfig.DEFAULT_DATABASE.isNotBlank()) {
+            BuildConfig.DEFAULT_DATABASE
+        } else {
+            com.sunmi.uhf.utils.AuthUtils.DEFAULT_DATABASE
+        }
 
-        // Pre-populate database spinner immediately so it is never empty while fetching
-        val initialAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, listOf(initialDb))
-        initialAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        binding.spinnerDatabase.adapter = initialAdapter
-        binding.spinnerDatabase.setSelection(0)
+        binding.etDatabase.setText(initialDb)
+        binding.etDatabase.setSelection(binding.etDatabase.text?.length ?: 0)
 
+        // Pre-populate database dropdown adapter
+        val initialAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, listOf(initialDb))
+        binding.etDatabase.setAdapter(initialAdapter)
 
-
-        // Auto fetch databases if URL is already populated
+        // Silent auto-fetch databases in the background without blocking screen
         val currentUrl = binding.etProjectUrl.text.toString().trim()
         if (currentUrl.isNotEmpty()) {
-            viewModel.fetchDatabases(currentUrl)
+            viewModel.fetchDatabases(currentUrl, silent = true)
         }
 
         binding.etProjectUrl.setOnFocusChangeListener { _, hasFocus ->
             if (!hasFocus) {
                 val url = binding.etProjectUrl.text.toString().trim()
                 if (url.isNotEmpty() && (viewModel.databases.value == null || viewModel.databases.value!!.isEmpty())) {
-                    viewModel.fetchDatabases(url)
+                    viewModel.fetchDatabases(url, silent = true)
                 }
             }
         }
@@ -71,7 +75,11 @@ class LoginActivity : BaseActivity<ActivityLoginBinding>() {
                 showToast("Please enter project URL")
                 return@setOnClickListener
             }
-            viewModel.fetchDatabases(url)
+            viewModel.fetchDatabases(url, silent = false)
+        }
+
+        binding.etDatabase.setOnClickListener {
+            binding.etDatabase.showDropDown()
         }
 
         var isPasswordVisible = false
@@ -114,14 +122,25 @@ class LoginActivity : BaseActivity<ActivityLoginBinding>() {
         viewModel.databases.observe(this) { databases ->
             if (databases.isNotEmpty()) {
                 val dbNames = databases.map { it.displayName }
-                val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, dbNames)
-                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-                binding.spinnerDatabase.adapter = adapter
+                val adapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, dbNames)
+                binding.etDatabase.setAdapter(adapter)
 
-                val savedDb = App.getPref().getParam("login_database", "")
-                val preferredDb = if (savedDb.isNotBlank()) savedDb else com.sunmi.uhf.utils.AuthUtils.DEFAULT_DATABASE
-                val targetIndex = dbNames.indexOf(preferredDb).takeIf { it >= 0 } ?: 0
-                binding.spinnerDatabase.setSelection(targetIndex)
+                val currentDb = binding.etDatabase.text.toString().trim()
+                if (currentDb.isEmpty() || !dbNames.contains(currentDb)) {
+                    val savedDb = App.getPref().getParam("login_database", "")
+                    val preferredDb = if (savedDb.isNotBlank() && dbNames.contains(savedDb)) {
+                        savedDb
+                    } else if (dbNames.contains(com.sunmi.uhf.utils.AuthUtils.DEFAULT_DATABASE)) {
+                        com.sunmi.uhf.utils.AuthUtils.DEFAULT_DATABASE
+                    } else {
+                        dbNames.firstOrNull() ?: ""
+                    }
+                    if (preferredDb.isNotEmpty()) {
+                        binding.etDatabase.setText(preferredDb)
+                        binding.etDatabase.setSelection(binding.etDatabase.text?.length ?: 0)
+                    }
+                }
+                binding.etDatabase.showDropDown()
             }
         }
 
@@ -151,7 +170,7 @@ class LoginActivity : BaseActivity<ActivityLoginBinding>() {
         val url = binding.etProjectUrl.text.toString().trim()
         val username = binding.etUsername.text.toString().trim()
         val password = binding.etPassword.text.toString().trim()
-        var database = binding.spinnerDatabase.selectedItem?.toString() ?: ""
+        var database = binding.etDatabase.text.toString().trim()
 
         if (database.isEmpty()) {
             val savedDb = App.getPref().getParam("login_database", "")

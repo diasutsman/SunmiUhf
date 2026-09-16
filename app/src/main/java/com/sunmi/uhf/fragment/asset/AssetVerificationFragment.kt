@@ -643,14 +643,91 @@ class AssetVerificationFragment : Fragment() {
                         success = jsonResp.optBoolean("success", true)
                         message = jsonResp.optString("message", message)
                     } else {
-                        // fallback to success if endpoint was processed
                         success = true
                     }
                 } catch (e: Exception) {
                     Log.w(TAG, "Endpoint /create/asset/line error, proceeding with confirmation: ${e.message}")
                     success = true
                 }
+                // 2. Direct Odoo update via call_kw on maintenance.equipment
+                if (assetEquipmentId > 0) {
+                    try {
+                        val vals = JSONObject().apply {
+                            if (isTransferOut) {
+                                if (isTargetCustomer) {
+                                    put("partner_id", selectedAssigneeId)
+                                    put("employee_id", false)
+                                    put("equipment_assign_to", "customer")
+                                } else {
+                                    put("employee_id", selectedAssigneeId)
+                                    put("partner_id", false)
+                                    put("equipment_assign_to", "employee")
+                                }
+                            } else {
+                                put("employee_id", false)
+                                put("partner_id", false)
+                                put("equipment_assign_to", false)
+                            }
+                        }
+                        val args = JSONArray().apply {
+                            put(JSONArray(listOf(assetEquipmentId)))
+                            put(vals)
+                        }
+                        ApiHelper.callKw(
+                            model = "maintenance.equipment",
+                            method = "write",
+                            args = args
+                        )
+                        success = true
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Direct callKw write to maintenance.equipment failed: ${e.message}")
+                    }
+                }
 
+                // 3. If in the context of a transfer order, also update matching transfer line
+                if (initialAssetId > 0 && isTransferOut && selectedAssigneeId != null) {
+                    try {
+                        val trDomain = JSONArray().apply {
+                            put(JSONArray().apply {
+                                put("employee_asset_transfer_id")
+                                put("=")
+                                put(initialAssetId)
+                            })
+                            if (assetEquipmentId > 0) {
+                                put(JSONArray().apply {
+                                    put("asset_id")
+                                    put("=")
+                                    put(assetEquipmentId)
+                                })
+                            }
+                        }
+                        val lines = ApiHelper.searchRead(
+                            model = "employee.asset.transfer.line",
+                            domain = trDomain,
+                            fields = listOf("id"),
+                            limit = 10
+                        )
+                        val lineIds = mutableListOf<Int>()
+                        for (idx in 0 until lines.length()) {
+                            lineIds.add(lines.getJSONObject(idx).getInt("id"))
+                        }
+                        if (lineIds.isNotEmpty()) {
+                            val lineArgs = JSONArray().apply {
+                                put(JSONArray(lineIds))
+                                put(JSONObject().apply { put("employee_id", selectedAssigneeId) })
+                            }
+                            ApiHelper.callKw(
+                                model = "employee.asset.transfer.line",
+                                method = "write",
+                                args = lineArgs
+                            )
+                        }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Transfer line write failed: ${e.message}")
+                    }
+                }
+
+                ApiHelper.clearCache()
                 loadingOverlay.visibility = View.GONE
 
                 if (success) {
