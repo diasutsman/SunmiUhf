@@ -21,6 +21,17 @@ class App : Application() {
         ToastUtils.init(this)
         RFIDManager.getInstance().setPrintLog(true)
         RFIDManager.getInstance().connect(mContext)
+
+        // Ensure default URL and database are always pre-configured
+        val pref = getPref()
+        val currentUrl = pref.getParam("login_url", "")
+        if (currentUrl.isNullOrBlank() || currentUrl == "false" || !currentUrl.contains("http")) {
+            pref.setParam("login_url", com.sunmi.uhf.utils.AuthUtils.DEFAULT_SERVER_URL)
+        }
+        val currentDb = pref.getParam("login_database", "")
+        if (currentDb.isNullOrBlank() || currentDb == "false") {
+            pref.setParam("login_database", com.sunmi.uhf.utils.AuthUtils.DEFAULT_DATABASE)
+        }
     }
 
     override fun onTerminate() {

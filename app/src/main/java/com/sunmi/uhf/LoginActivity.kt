@@ -26,29 +26,32 @@ class LoginActivity : BaseActivity<ActivityLoginBinding>() {
         checkExistingSession()
 
         val pref = App.getPref()
+        val forcedUrl = com.sunmi.uhf.utils.AuthUtils.DEFAULT_SERVER_URL // "https://bhsglobal.hashmicro.co"
+        val forcedDb = com.sunmi.uhf.utils.AuthUtils.DEFAULT_DATABASE   // "bhs-live"
+
         val savedUrl = pref.getParam("login_url", "")
-        val initialUrl = if (savedUrl.isNotBlank()) {
+        val initialUrl = if (savedUrl.isNotBlank() && savedUrl != "false" && savedUrl.contains("http")) {
             savedUrl
-        } else if (BuildConfig.SERVER_URL.isNotBlank()) {
-            BuildConfig.SERVER_URL
         } else {
-            com.sunmi.uhf.utils.AuthUtils.DEFAULT_SERVER_URL
+            forcedUrl
         }
 
         binding.etProjectUrl.setText(initialUrl)
         binding.etProjectUrl.setSelection(binding.etProjectUrl.text?.length ?: 0)
 
         val savedDb = pref.getParam("login_database", "")
-        val initialDb = if (savedDb.isNotBlank()) {
+        val initialDb = if (savedDb.isNotBlank() && savedDb != "false") {
             savedDb
-        } else if (BuildConfig.DEFAULT_DATABASE.isNotBlank()) {
-            BuildConfig.DEFAULT_DATABASE
         } else {
-            com.sunmi.uhf.utils.AuthUtils.DEFAULT_DATABASE
+            forcedDb
         }
 
         binding.etDatabase.setText(initialDb)
         binding.etDatabase.setSelection(binding.etDatabase.text?.length ?: 0)
+
+        // Always ensure preferences hold the valid initial values
+        pref.setParam("login_url", initialUrl)
+        pref.setParam("login_database", initialDb)
 
         // Pre-populate database dropdown adapter
         val initialAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, listOf(initialDb))
@@ -72,7 +75,8 @@ class LoginActivity : BaseActivity<ActivityLoginBinding>() {
         binding.btnFetchDatabases.setOnClickListener {
             val url = binding.etProjectUrl.text.toString().trim()
             if (url.isEmpty()) {
-                showToast("Please enter project URL")
+                binding.etProjectUrl.setText(forcedUrl)
+                viewModel.fetchDatabases(forcedUrl, silent = false)
                 return@setOnClickListener
             }
             viewModel.fetchDatabases(url, silent = false)
@@ -97,6 +101,16 @@ class LoginActivity : BaseActivity<ActivityLoginBinding>() {
 
         binding.btnLogin.setOnClickListener {
             performLogin()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (binding.etProjectUrl.text.isNullOrBlank()) {
+            binding.etProjectUrl.setText(com.sunmi.uhf.utils.AuthUtils.DEFAULT_SERVER_URL)
+        }
+        if (binding.etDatabase.text.isNullOrBlank()) {
+            binding.etDatabase.setText(com.sunmi.uhf.utils.AuthUtils.DEFAULT_DATABASE)
         }
     }
 
@@ -133,14 +147,13 @@ class LoginActivity : BaseActivity<ActivityLoginBinding>() {
                     } else if (dbNames.contains(com.sunmi.uhf.utils.AuthUtils.DEFAULT_DATABASE)) {
                         com.sunmi.uhf.utils.AuthUtils.DEFAULT_DATABASE
                     } else {
-                        dbNames.firstOrNull() ?: ""
+                        dbNames.firstOrNull() ?: com.sunmi.uhf.utils.AuthUtils.DEFAULT_DATABASE
                     }
                     if (preferredDb.isNotEmpty()) {
                         binding.etDatabase.setText(preferredDb)
                         binding.etDatabase.setSelection(binding.etDatabase.text?.length ?: 0)
                     }
                 }
-                binding.etDatabase.showDropDown()
             }
         }
 
@@ -167,18 +180,22 @@ class LoginActivity : BaseActivity<ActivityLoginBinding>() {
     }
 
     private fun performLogin() {
-        val url = binding.etProjectUrl.text.toString().trim()
+        var url = binding.etProjectUrl.text.toString().trim()
         val username = binding.etUsername.text.toString().trim()
         val password = binding.etPassword.text.toString().trim()
         var database = binding.etDatabase.text.toString().trim()
 
+        if (url.isEmpty()) {
+            url = com.sunmi.uhf.utils.AuthUtils.DEFAULT_SERVER_URL
+            binding.etProjectUrl.setText(url)
+        }
+
         if (database.isEmpty()) {
-            val savedDb = App.getPref().getParam("login_database", "")
-            database = if (savedDb.isNotEmpty()) savedDb else com.sunmi.uhf.utils.AuthUtils.DEFAULT_DATABASE
+            database = com.sunmi.uhf.utils.AuthUtils.DEFAULT_DATABASE
+            binding.etDatabase.setText(database)
         }
 
         when {
-            url.isEmpty() -> showToast("Please enter project URL")
             username.isEmpty() -> showToast("Please enter username")
             password.isEmpty() -> showToast("Please enter password")
             else -> {

@@ -16,7 +16,9 @@ object AuthUtils {
         pref.clearPreference("login_session_id")
         pref.clearPreference("login_username")
         pref.clearPreference("is_logged_in")
-        // Preserve login_url and login_database for convenient auto-fill
+        // Always ensure default URL & database remain set
+        pref.setParam("login_url", DEFAULT_SERVER_URL)
+        pref.setParam("login_database", DEFAULT_DATABASE)
     }
 
     fun isLoggedIn(): Boolean {
@@ -25,12 +27,14 @@ object AuthUtils {
 
     fun getLoginInfo(): Map<String, String> {
         val pref = App.getPref()
+        val url = pref.getParam("login_url", "").ifBlank { DEFAULT_SERVER_URL }
+        val db = pref.getParam("login_database", "").ifBlank { DEFAULT_DATABASE }
         return mapOf(
             "uid" to pref.getParam("login_uid", 0).toString(),
             "sessionId" to (pref.getParam("login_session_id", "") ?: ""),
-            "database" to (pref.getParam("login_database", "") ?: ""),
+            "database" to db,
             "username" to (pref.getParam("login_username", "") ?: ""),
-            "url" to (pref.getParam("login_url", "") ?: "")
+            "url" to url
         )
     }
 
@@ -41,12 +45,20 @@ object AuthUtils {
     fun getServerUrl(): String {
         val pref = App.getPref()
         val savedUrl = pref.getParam("login_url", "")
-        return if (savedUrl.isNotEmpty()) {
+        return if (savedUrl.isNotBlank() && savedUrl != "false" && savedUrl != "-") {
             savedUrl
-        } else if (BuildConfig.SERVER_URL.isNotEmpty()) {
-            BuildConfig.SERVER_URL
         } else {
             DEFAULT_SERVER_URL
+        }
+    }
+
+    fun getDatabase(): String {
+        val pref = App.getPref()
+        val savedDb = pref.getParam("login_database", "")
+        return if (savedDb.isNotBlank() && savedDb != "false" && savedDb != "-") {
+            savedDb
+        } else {
+            DEFAULT_DATABASE
         }
     }
 
